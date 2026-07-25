@@ -72,7 +72,7 @@ class Animal(Base):
 
     breed_id: Mapped[int] = mapped_column(ForeignKey('breed.breed_id'), nullable=True)
     parent_id: Mapped[int] = mapped_column(
-        ForeignKey('animal.animal_id'), nullable=True
+        ForeignKey('animal.animal_id', ondelete='SET NULL'), nullable=True
     )  # ссылка на самого себя (родитель)
 
     breed: Mapped["Breed"] = relationship(back_populates="animals")
