@@ -9,11 +9,11 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from app.schemas import UserCreate, UserResponse, Token
 from app.db.session import get_db
 from app.core.security import create_access_token, decode_token, hash_password, verify_password
-from app.db.crud import get_by_id
+from app.db.crud import get_by_id, get_by_activation_token
 from app.models import User
 
 from app.core.config import settings
-from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -25,29 +25,34 @@ def register(session: Session, login: str, email: str, password: str) -> UserRes
     """"Создаёт пользователя в неактивном состоянии, ждущего активации по email"""
 
     if get_by_email(email=email, session=session):
-        raise HTTPException(status_code=400, detail='Email already exist')
+        raise HTTPException(status_code=409, detail='Email already exist')
 
     if get_by_login(session=session, login=login):
-        raise HTTPException(status_code=400, detail='Login already exists')
+        raise HTTPException(status_code=409, detail='Login already exists')
 
     hashed_password = hash_password(password=password)
 
     activation_token = secrets.token_urlsafe(32)
 
-    user = create_user(
-        login=login,
-        email=email,
-        hashed_password=hashed_password.decode(),
-        activation_token=activation_token,
-        session=session
-    )
+    try:
+        user = create_user(
+            login=login,
+            email=email,
+            hashed_password=hashed_password.decode(),
+            activation_token=activation_token,
+            session=session
+        )
 
-    logger.info(f"User registered: {email} (login={login})")
+        logger.info(f"User registered: {email} (login={login})")
 
-    activation_link = f"/auth/activate/{activation_token}"
-    logger.info(f"Activation link for {email}: {activation_link}")
+        activation_link = f"/auth/activate/{activation_token}"
+        logger.info(f"Activation link for {email}: {activation_link}")
 
-    return user
+        return user
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=409, detail='Login or email already exists')
+
 
 
 def authenticate(session: Session, login: str, password: str) -> UserResponse:
@@ -64,9 +69,7 @@ def authenticate(session: Session, login: str, password: str) -> UserResponse:
         HTTPException 400: Если пользователь не найден, не активирован или пароль неверный.
     """
 
-    user = session.execute(
-        select(User).where(User.login == login)
-    ).scalar_one_or_none()
+    user = get_by_login(session=session, login=login)
 
     if not user:
         logger.warning(f"Failed login attempt: unknown login={login}")
@@ -107,9 +110,7 @@ def login(session: Session = Depends(get_db), form_data: OAuth2PasswordRequestFo
     return {'access_token': access_token, 'token_type': 'bearer'}
 
 def activate(session: Session, token: str) -> UserResponse:
-    user = session.execute(
-        select(User).where(User.activation_token == token)
-    ).scalar_one_or_none()
+    user = get_by_activation_token(session=session, token=token)
 
     if not user:
         logger.warning(f"Activation failed: invalid token {token}")

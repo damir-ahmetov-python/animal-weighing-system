@@ -37,7 +37,7 @@ class AnimalType(Base):
     type_id: Mapped[int] = mapped_column(primary_key=True)
     name_type: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
 
-    breeds: Mapped[list["Breed"]] = relationship(back_populates="animaltype")
+    breeds: Mapped[list["Breed"]] = relationship(back_populates="animaltype", passive_deletes=True)
 
 
 class Breed(Base):
@@ -51,8 +51,7 @@ class Breed(Base):
     type_id: Mapped[int] = mapped_column(ForeignKey('animaltype.type_id'), nullable=False)
 
     animaltype: Mapped["AnimalType"] = relationship(back_populates="breeds")
-    animals: Mapped[list["Animal"]] = relationship(back_populates="breed")
-
+    animals: Mapped[list["Animal"]] = relationship(back_populates="breed", passive_deletes=True)
 
 class Animal(Base):
     """Данные о животном: инвентарный номер, пол, кличка, дата прибытия, возраст, порода и родитель."""
@@ -72,7 +71,7 @@ class Animal(Base):
 
     breed_id: Mapped[int] = mapped_column(ForeignKey('breed.breed_id'), nullable=True)
     parent_id: Mapped[int] = mapped_column(
-        ForeignKey('animal.animal_id'), nullable=True
+        ForeignKey('animal.animal_id', ondelete='SET NULL'), nullable=True
     )  # ссылка на самого себя (родитель)
 
     breed: Mapped["Breed"] = relationship(back_populates="animals")
