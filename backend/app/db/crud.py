@@ -117,6 +117,11 @@ def get_animal_by_id(session: Session, animal_id: int) -> Animal | None:
 
     return res.scalar_one_or_none()
 
+def get_all_animals(session: Session) -> list[Animal]:
+    res = session.execute(select(Animal))
+
+    return list(res.scalars().all())
+
 def update_animal(session: Session, animal: Animal, data: dict) -> Animal:
     for k, v in data.items():
         setattr(animal, k, v)
@@ -126,11 +131,8 @@ def update_animal(session: Session, animal: Animal, data: dict) -> Animal:
 
     return animal
 
-def delete_animal(session: Session, animal_id: int) -> bool:
-    animal = get_animal_by_id(session=session, animal_id=animal_id)
-
+def delete_animal(session: Session, animal: Animal) -> None:
     session.delete(animal)
-
     session.commit()
 
 
