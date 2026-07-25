@@ -69,6 +69,23 @@ def get_animal_type_by_name(session: Session, name_type: str) -> AnimalType | No
 
     return res.scalar_one_or_none()
 
+def get_all_animal_types(session: Session) -> list[AnimalType]:
+    res = session.execute(select(AnimalType))
+    return list(res.scalars().all())
+
+def update_animal_type(session: Session, animal_type: AnimalType, data: dict) -> AnimalType:
+    for k, v in data.items():
+        setattr(animal_type, k, v)
+
+    session.commit()
+    session.refresh(animal_type)
+
+    return animal_type
+
+def delete_animal_type(session: Session, animal_type: AnimalType) -> None:
+    session.delete(animal_type)
+    session.commit()
+
 def create_breed(session: Session, name: str, type_id: int) -> Breed:
     breed = Breed(name=name, type_id=type_id)
 
@@ -83,6 +100,23 @@ def get_breed_by_id(session: Session, breed_id: int) -> Breed | None:
     res = session.execute(select(Breed).where(Breed.breed_id == breed_id))
 
     return res.scalar_one_or_none()
+
+def get_all_breeds(session: Session) -> list[Breed]:
+    res = session.execute(select(Breed))
+    return list(res.scalars().all())
+
+def update_breed(session: Session, breed: Breed, data: dict) -> Breed:
+    for k, v in data.items():
+        setattr(breed, k, v)
+
+    session.commit()
+    session.refresh(breed)
+
+    return breed
+
+def delete_breed(session: Session, breed: Breed) -> None:
+    session.delete(breed)
+    session.commit()
 
 def create_animal(
         session: Session,
