@@ -53,6 +53,11 @@ class Breed(Base):
     animaltype: Mapped["AnimalType"] = relationship(back_populates="breeds")
     animals: Mapped[list["Animal"]] = relationship(back_populates="breed", passive_deletes=True)
 
+    # Ограничение: одна и та же порода не может дублироваться в рамках одного типа животного
+    __table_args__ = (
+        UniqueConstraint('type_id', 'name', name='uq_breed_type_name'),
+    )
+
 class Animal(Base):
     """Данные о животном: инвентарный номер, пол, кличка, дата прибытия, возраст, порода и родитель."""
 
