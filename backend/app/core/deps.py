@@ -3,9 +3,9 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from app.core.security import decode_token
-from app.db.crud import get_by_id
+from app.db.crud import get_by_id, get_weighting_by_id
 from app.db.session import get_db
-from app.models import User
+from app.models import User, Weighting
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/auth/login')
 
@@ -30,12 +30,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
     try:
         user_id = int(payload.get('sub'))
     except (TypeError, ValueError):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate credentials')
+        raise HTTPException(status_code=401, detail='Could not validate credentials')
 
     user = get_by_id(session=session, user_id=user_id)
 
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate credentials')
+        raise HTTPException(status_code=401, detail='Could not validate credentials')
 
     return user
 
@@ -55,6 +55,18 @@ def require_admin(user: User = Depends(get_current_user)) -> User:
     """
 
     if user.role != 'admin':
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Admin privileges required')
+        raise HTTPException(status_code=403, detail='Admin privileges required')
 
     return user
+
+def get_weighting(
+    weighting_id: int,
+    session: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Weighting:
+    weighting = get_weighting_by_id(session=session, weighting_id=weighting_id)
+
+    if not weighting or (current_user.role != 'admin' and weighting.created_by_user_id != current_user.id):
+        raise HTTPException(status_code=404, detail="Weighting not found")
+
+    return weighting
