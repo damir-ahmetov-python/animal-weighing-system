@@ -30,13 +30,12 @@ from app.core.deps import get_current_user
 
 from sqlalchemy.orm import Session
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 @router.post("/animal_types", response_model=AnimalTypeResponse, tags=["animal_types"])
 def create_animal_type_endpoint(
         animal_type_data: AnimalTypeCreate,
-        session: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+        session: Session = Depends(get_db)
 ):
     try:
         animal_type = create_animal_type(session=session, name_type=animal_type_data.name_type)
@@ -46,11 +45,11 @@ def create_animal_type_endpoint(
         raise HTTPException(status_code=409, detail='Animal type already exists')
 
 @router.get("/animal_types", response_model=List[AnimalTypeResponse], tags=["animal_types"])
-def get_animal_types(session: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_animal_types(session: Session = Depends(get_db)):
     return get_all_animal_types(session=session)
 
 @router.get("/animal_types/{type_id}", response_model=AnimalTypeResponse, tags=["animal_types"])
-def get_animal_type(type_id: int, session: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_animal_type(type_id: int, session: Session = Depends(get_db)):
     animal_type = get_animal_type_by_id(session=session, type_id=type_id)
 
     if not animal_type:
@@ -62,8 +61,7 @@ def get_animal_type(type_id: int, session: Session = Depends(get_db), current_us
 def update_animal_type_endpoint(
         type_id: int,
         data: AnimalTypeUpdate,
-        session: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+        session: Session = Depends(get_db)
 ):
     animal_type = get_animal_type_by_id(session=session, type_id=type_id)
 
@@ -81,8 +79,7 @@ def update_animal_type_endpoint(
 @router.delete("/animal_types/{type_id}", response_model=bool, tags=["animal_types"])
 def delete_animal_type_endpoint(
         type_id: int,
-        session: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+        session: Session = Depends(get_db)
 ):
     animal_type = get_animal_type_by_id(session=session, type_id=type_id)
 
@@ -100,8 +97,7 @@ def delete_animal_type_endpoint(
 @router.post("/breeds", response_model=BreedResponse, tags=["breeds"])
 def create_breed_endpoint(
         breed_data: BreedCreate,
-        session: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+        session: Session = Depends(get_db)
 ):
     if not get_animal_type_by_id(session=session, type_id=breed_data.type_id):
         raise HTTPException(status_code=404, detail='Animal type not found')
@@ -112,14 +108,14 @@ def create_breed_endpoint(
         return breed
     except IntegrityError:
         session.rollback()
-        raise HTTPException(status_code=409, detail='Data conflict: animal type')
+        raise HTTPException(status_code=409, detail='Data conflict: check animal type reference and breed name uniqueness')
 
 @router.get("/breeds", response_model=List[BreedResponse], tags=["breeds"])
-def get_breeds(session: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_breeds(session: Session = Depends(get_db)):
     return get_all_breeds(session=session)
 
 @router.get("/breeds/{breed_id}", response_model=BreedResponse, tags=["breeds"])
-def get_breed(breed_id: int, session: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_breed(breed_id: int, session: Session = Depends(get_db)):
     breed = get_breed_by_id(session=session, breed_id=breed_id)
 
     if not breed:
@@ -131,8 +127,7 @@ def get_breed(breed_id: int, session: Session = Depends(get_db), current_user: U
 def update_breed_endpoint(
         breed_id: int,
         data: BreedUpdate,
-        session: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+        session: Session = Depends(get_db)
 ):
     breed = get_breed_by_id(session=session, breed_id=breed_id)
 
@@ -148,13 +143,12 @@ def update_breed_endpoint(
         return update_breed(session=session, breed=breed, data=update_data)
     except IntegrityError:
         session.rollback()
-        raise HTTPException(status_code=409, detail='Data conflict: animal type')
+        raise HTTPException(status_code=409, detail='Data conflict: check animal type reference and breed name uniqueness')
 
 @router.delete("/breeds/{breed_id}", response_model=bool, tags=["breeds"])
 def delete_breed_endpoint(
         breed_id: int,
-        session: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+        session: Session = Depends(get_db)
 ):
     breed = get_breed_by_id(session=session, breed_id=breed_id)
 
