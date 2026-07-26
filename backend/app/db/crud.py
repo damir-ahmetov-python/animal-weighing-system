@@ -1,6 +1,6 @@
 import datetime
 
-from app.models import User, AnimalType, Breed, Animal
+from app.models import User, AnimalType, Breed, Animal, Weighting
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -48,6 +48,18 @@ def get_by_activation_token(session: Session, token: str) -> User | None:
     res = session.execute(select(User).where(User.activation_token == token))
 
     return res.scalar_one_or_none()
+
+def get_all_users(session: Session) -> list[User]:
+    res = session.execute(select(User))
+    return list(res.scalars().all())
+
+def update_user_toggle_active(session: Session, user: User) -> User:
+    user.is_active = not user.is_active
+
+    session.commit()
+    session.refresh(user)
+
+    return user
 
 def create_animal_type(session: Session, name_type: str) -> AnimalType:
     animal_type = AnimalType(name_type=name_type)
@@ -169,4 +181,53 @@ def delete_animal(session: Session, animal: Animal) -> None:
     session.delete(animal)
     session.commit()
 
+def create_weighting(
+        session: Session,
+        animal_id: int,
+        date: datetime.date,
+        weight_kg:float,
+        created_by_user_id: int
+) -> Weighting:
+    weighting = Weighting(
+        animal_id=animal_id,
+        date=date,
+        weight_kg=weight_kg,
+        created_by_user_id=created_by_user_id
+    )
 
+    session.add(weighting)
+
+    session.commit()
+    session.refresh(weighting)
+
+    return weighting
+
+
+def get_weighting_by_id(session: Session, weighting_id: int) -> Weighting | None:
+    res = session.execute(select(Weighting).where(Weighting.weighting_id == weighting_id))
+
+    return res.scalar_one_or_none()
+
+def get_all_weightings(session: Session) -> list[Weighting]:
+    res = session.execute(select(Weighting))
+
+    return list(res.scalars().all())
+
+def get_weighting_by_user(session: Session, user_id: int) -> list[Weighting] | None:
+    res = session.execute(select(Weighting).where(Weighting.created_by_user_id == user_id))
+
+    return list(res.scalars().all())
+
+
+def update_weighting(session: Session, weighting: Weighting, data: dict) -> Weighting:
+    for k, v in data.items():
+        setattr(weighting, k, v)
+
+    session.commit()
+    session.refresh(weighting)
+
+    return weighting
+
+def delete_weighting(session: Session, weighting: Weighting) -> None:
+    session.delete(weighting)
+    session.commit()

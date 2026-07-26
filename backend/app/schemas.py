@@ -92,3 +92,21 @@ class AnimalResponse(BaseModel):
     breed_id: int
     parent_id: int | None = None
 
+class WeightingCreate(BaseModel):
+    animal_id: int
+    date: datetime.date
+    weight_kg: float = Field(gt=0)
+
+class WeightingUpdate(BaseModel):
+    animal_id: int | None = None
+    date: datetime.date | None = None
+    weight_kg: float | None = Field(gt=0, default=None)
+
+class WeightingResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    weighting_id: int
+    animal_id: int
+    date: datetime.date
+    weight_kg: float
+    created_by_user_id: int
