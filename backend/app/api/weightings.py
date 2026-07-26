@@ -72,7 +72,7 @@ def update_weighting_endpoint(
         return update_weighting(session=session, weighting=weighting, data=update_data)
     except IntegrityError:
         session.rollback()
-        raise HTTPException(status_code=409, detail='Data conflict')
+        raise HTTPException(status_code=409, detail='Weighting for this animal on this date already exists')
 
 
 @router.delete("/{weighting_id}", response_model=bool)
