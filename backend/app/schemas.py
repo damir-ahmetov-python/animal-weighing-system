@@ -43,6 +43,7 @@ class BreedResponse(BaseModel):
 
     breed_id: int
     name: str
+    type_id: int
 
 class BreedUpdate(BaseModel):
     name: str | None = None
