@@ -85,3 +85,54 @@ export function getMe(token) {
     headers: authHeader(token),
   });
 }
+
+function authedJson(token) {
+  return { 'Content-Type': 'application/json', ...authHeader(token) };
+}
+
+// Список/создание/редактирование/удаление у animal_types, breeds, animals и
+// weightings устроены одинаково на backend - list/create/update/remove через
+// одну и ту же фабрику, вместо того чтобы 4 раза копировать одни и те же 4 функции.
+function crudApi(basePath) {
+  return {
+    list: (token) => request(basePath, { headers: authHeader(token) }),
+
+    create: (token, data) =>
+      request(basePath, {
+        method: 'POST',
+        headers: authedJson(token),
+        body: JSON.stringify(data),
+      }),
+
+    update: (token, id, data) =>
+      request(`${basePath}/${id}`, {
+        method: 'PATCH',
+        headers: authedJson(token),
+        body: JSON.stringify(data),
+      }),
+
+    remove: (token, id) =>
+      request(`${basePath}/${id}`, {
+        method: 'DELETE',
+        headers: authHeader(token),
+      }),
+  };
+}
+
+export const animalTypesApi = crudApi('/animal_types');
+export const breedsApi = crudApi('/breeds');
+export const animalsApi = crudApi('/animals');
+export const weightingsApi = crudApi('/weightings');
+
+// Admin-эндпоинты не укладываются в тот же CRUD-паттерн (нет create,
+// вместо update - конкретное действие toggle-active), поэтому отдельно.
+export function getUsers(token) {
+  return request('/admin/users', { headers: authHeader(token) });
+}
+
+export function toggleUserActive(token, userId) {
+  return request(`/admin/users/${userId}/toggle-active`, {
+    method: 'PATCH',
+    headers: authHeader(token),
+  });
+}

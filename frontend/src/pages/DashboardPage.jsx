@@ -1,34 +1,11 @@
-import { useEffect, useState } from 'react';
-import { getMe } from '../api/client';
 import { useAuth } from '../context/useAuth';
 
+// Данные пользователя уже подтянуты в AuthProvider сразу после логина -
+// здесь их просто читаем из контекста, повторный запрос не нужен.
 export default function DashboardPage() {
-  const { token } = useAuth();
-  const [user, setUser] = useState(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    getMe(token)
-      .then((data) => {
-        if (!cancelled) setUser(data);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
-
-  if (loading) return <p>Загрузка...</p>;
-  if (error) return <p className="form-error">{error}</p>;
+  if (!user) return <p>Загрузка...</p>;
 
   return (
     <div>
@@ -37,8 +14,6 @@ export default function DashboardPage() {
       <p>Email: {user.email}</p>
       <p>Роль: {user.role}</p>
       <p>Активен: {user.is_active ? 'да' : 'нет'}</p>
-
-      {/* Таблицы animal type / breed / animal / weighting - День 6 */}
     </div>
   );
 }
