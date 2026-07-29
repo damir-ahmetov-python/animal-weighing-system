@@ -11,10 +11,12 @@ router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(requir
 
 @router.get("/users", response_model=List[UserResponse])
 def get_users(session: Session = Depends(get_db)):
+    """Доступ только admin - проверяется через require_admin на уровне роутера."""
     return get_all_users(session=session)
 
 @router.patch("/users/{user_id}/toggle-active", response_model=UserResponse)
 def update_user_toggle_active_endpoint(user_id: int, session: Session = Depends(get_db)):
+    """Включает/отключает пользователя (is_active) - неактивный не может логиниться."""
     user = get_by_id(session=session, user_id=user_id)
 
     if not user:
