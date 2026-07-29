@@ -1,31 +1,27 @@
 import logging
 import secrets
 
-from app.db.crud import get_by_email, get_by_login, create_user
-
 from fastapi import Depends, APIRouter, HTTPException
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm
 
 from app.schemas import UserCreate, UserResponse, Token
 from app.db.session import get_db
-from app.core.security import create_access_token, decode_token, hash_password, verify_password
-from app.db.crud import get_by_id, get_by_activation_token
+from app.core.security import create_access_token, hash_password, verify_password
+from app.db.crud import get_by_email, get_by_login, create_user, get_by_activation_token, activate_user
 from app.models import User
 
-from app.core.config import settings
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/auth/login')
 
-def register(session: Session, login: str, email: str, password: str) -> UserResponse:
-    """"Создаёт пользователя в неактивном состоянии, ждущего активации по email"""
+def register(session: Session, login: str, email: str, password: str) -> User:
+    """Создаёт пользователя в неактивном состоянии, ждущего активации по email"""
 
     if get_by_email(email=email, session=session):
-        raise HTTPException(status_code=409, detail='Email already exist')
+        raise HTTPException(status_code=409, detail='Email already exists')
 
     if get_by_login(session=session, login=login):
         raise HTTPException(status_code=409, detail='Login already exists')
@@ -55,7 +51,7 @@ def register(session: Session, login: str, email: str, password: str) -> UserRes
 
 
 
-def authenticate(session: Session, login: str, password: str) -> UserResponse:
+def authenticate(session: Session, login: str, password: str) -> User:
     """
     Проверяет данные пользователя и возвращает его.
 
@@ -109,7 +105,7 @@ def login(session: Session = Depends(get_db), form_data: OAuth2PasswordRequestFo
 
     return {'access_token': access_token, 'token_type': 'bearer'}
 
-def activate(session: Session, token: str) -> UserResponse:
+def activate(session: Session, token: str) -> User:
     user = get_by_activation_token(session=session, token=token)
 
     if not user:
@@ -120,11 +116,7 @@ def activate(session: Session, token: str) -> UserResponse:
         logger.warning(f"Activation failed: user {user.email} already activated")
         raise HTTPException(status_code=400, detail='User already activated')
 
-    user.is_active = True
-    user.activation_token = None
-
-    session.commit()
-    session.refresh(user)
+    user = activate_user(session=session, user=user)
 
     logger.info(f"User activated: {user.email}")
 

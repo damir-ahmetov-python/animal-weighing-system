@@ -3,6 +3,7 @@ import { animalsApi, weightingsApi } from '../api/client';
 import { useAuth } from '../context/useAuth';
 import FormField from '../components/FormField';
 import DataTable from '../components/DataTable';
+import { findLabel, toOptions } from '../utils/options';
 
 const emptyForm = { animal_id: '', date: '', weight_kg: '' };
 
@@ -32,8 +33,7 @@ export default function WeightingsPage() {
   }, [loadData]);
 
   const animalLabel = (animalId) =>
-    animals.find((animal) => animal.animal_id === animalId)?.inventory_number ??
-    animalId;
+    findLabel(animals, 'animal_id', animalId, 'inventory_number');
 
   const resetForm = () => {
     setEditingId(null);
@@ -84,13 +84,12 @@ export default function WeightingsPage() {
 
   if (loading) return <p>Загрузка...</p>;
 
-  const animalOptions = [
-    { value: '', label: '— выберите животное —' },
-    ...animals.map((animal) => ({
-      value: animal.animal_id,
-      label: animal.inventory_number,
-    })),
-  ];
+  const animalOptions = toOptions(
+    animals,
+    'animal_id',
+    'inventory_number',
+    '— выберите животное —'
+  );
 
   return (
     <div>

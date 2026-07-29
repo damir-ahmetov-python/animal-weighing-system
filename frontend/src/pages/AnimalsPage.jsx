@@ -3,6 +3,7 @@ import { animalsApi, breedsApi } from '../api/client';
 import { useAuth } from '../context/useAuth';
 import FormField from '../components/FormField';
 import DataTable from '../components/DataTable';
+import { findLabel, toOptions } from '../utils/options';
 
 const emptyForm = {
   inventory_number: '',
@@ -37,12 +38,10 @@ export default function AnimalsPage() {
     loadData();
   }, [loadData]);
 
-  const breedName = (breedId) =>
-    breeds.find((breed) => breed.breed_id === breedId)?.name ?? breedId;
+  const breedName = (breedId) => findLabel(breeds, 'breed_id', breedId, 'name');
 
   const animalLabel = (animalId) =>
-    animals.find((animal) => animal.animal_id === animalId)?.inventory_number ??
-    animalId;
+    findLabel(animals, 'animal_id', animalId, 'inventory_number');
 
   const resetForm = () => {
     setEditingId(null);
@@ -103,17 +102,14 @@ export default function AnimalsPage() {
 
   if (loading) return <p>Загрузка...</p>;
 
-  const breedOptions = [
-    { value: '', label: '— выберите породу —' },
-    ...breeds.map((breed) => ({ value: breed.breed_id, label: breed.name })),
-  ];
+  const breedOptions = toOptions(breeds, 'breed_id', 'name', '— выберите породу —');
 
-  const parentOptions = [
-    { value: '', label: '— нет —' },
-    ...animals
-      .filter((animal) => animal.animal_id !== editingId)
-      .map((animal) => ({ value: animal.animal_id, label: animal.inventory_number })),
-  ];
+  const parentOptions = toOptions(
+    animals.filter((animal) => animal.animal_id !== editingId),
+    'animal_id',
+    'inventory_number',
+    '— нет —'
+  );
 
   return (
     <div>
