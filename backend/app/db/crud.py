@@ -83,6 +83,16 @@ def update_user_toggle_active(session: Session, user: User) -> User:
 
     return user
 
+def activate_user(session: Session, user: User) -> User:
+    """Активирует пользователя и очищает одноразовый токен активации."""
+    user.is_active = True
+    user.activation_token = None
+
+    session.commit()
+    session.refresh(user)
+
+    return user
+
 def create_animal_type(session: Session, name_type: str) -> AnimalType:
     animal_type = AnimalType(name_type=name_type)
 

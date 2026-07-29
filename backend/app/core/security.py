@@ -37,6 +37,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(data: dict) -> str:
+    """Создаёт JWT access-токен со сроком жизни TTL минут (из настроек)."""
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=TTL)
     to_encode.update({'exp': expire})
@@ -56,7 +57,7 @@ def decode_token(token: str) -> dict:
         Словарь с данными из токена (payload).
 
     Raises:
-        Ошибка валидации, если токен недействителен или подпись не совпадает.
+        HTTPException 401: Если токен недействителен, истёк или подпись не совпадает.
     """
 
     try:
