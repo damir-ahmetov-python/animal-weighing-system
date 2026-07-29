@@ -1,11 +1,11 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from app.core.security import decode_token
-from app.db.crud import get_by_id, get_weighting_by_id
+from app.db.crud import get_by_id, get_weighting_by_id, get_animal_type_by_id, get_breed_by_id, get_animal_by_id
 from app.db.session import get_db
-from app.models import User, Weighting
+from app.models import User, Weighting, AnimalType, Breed, Animal
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/auth/login')
 
@@ -64,9 +64,42 @@ def get_weighting(
     session: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Weighting:
+    """Находит запись взвешивания по id и проверяет доступ: admin видит любую
+    запись, обычный пользователь - только свою (иначе 404, не 403 - чтобы
+    не палить сам факт существования чужой записи)."""
     weighting = get_weighting_by_id(session=session, weighting_id=weighting_id)
 
     if not weighting or (current_user.role != 'admin' and weighting.created_by_user_id != current_user.id):
         raise HTTPException(status_code=404, detail="Weighting not found")
 
     return weighting
+
+def require_animal_type(type_id: int, session: Session = Depends(get_db)) -> AnimalType:
+    """Находит тип животного по id либо кидает 404 - убирает дублирование
+    этой проверки в get/update/delete эндпоинтах catalog.py."""
+    animal_type = get_animal_type_by_id(session=session, type_id=type_id)
+
+    if not animal_type:
+        raise HTTPException(status_code=404, detail='Animal type not found')
+
+    return animal_type
+
+def require_breed(breed_id: int, session: Session = Depends(get_db)) -> Breed:
+    """Находит породу по id либо кидает 404 - убирает дублирование
+    этой проверки в get/update/delete эндпоинтах catalog.py."""
+    breed = get_breed_by_id(session=session, breed_id=breed_id)
+
+    if not breed:
+        raise HTTPException(status_code=404, detail='Breed not found')
+
+    return breed
+
+def require_animal(animal_id: int, session: Session = Depends(get_db)) -> Animal:
+    """Находит животное по id либо кидает 404 - убирает дублирование
+    этой проверки в get/update/delete эндпоинтах animals.py."""
+    animal = get_animal_by_id(session=session, animal_id=animal_id)
+
+    if not animal:
+        raise HTTPException(status_code=404, detail='Animal not found')
+
+    return animal
