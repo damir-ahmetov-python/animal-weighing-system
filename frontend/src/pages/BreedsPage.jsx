@@ -3,6 +3,7 @@ import { animalTypesApi, breedsApi } from '../api/client';
 import { useAuth } from '../context/useAuth';
 import FormField from '../components/FormField';
 import DataTable from '../components/DataTable';
+import { findLabel, toOptions } from '../utils/options';
 
 const emptyForm = { name: '', type_id: '' };
 
@@ -31,8 +32,7 @@ export default function BreedsPage() {
 
   // Название типа для колонки "Тип" - тянем из уже загруженного списка типов,
   // а не отдельным запросом на каждую строку.
-  const typeName = (typeId) =>
-    types.find((type) => type.type_id === typeId)?.name_type ?? typeId;
+  const typeName = (typeId) => findLabel(types, 'type_id', typeId, 'name_type');
 
   const resetForm = () => {
     setEditingId(null);
@@ -75,10 +75,7 @@ export default function BreedsPage() {
 
   if (loading) return <p>Загрузка...</p>;
 
-  const typeOptions = [
-    { value: '', label: '— выберите тип —' },
-    ...types.map((type) => ({ value: type.type_id, label: type.name_type })),
-  ];
+  const typeOptions = toOptions(types, 'type_id', 'name_type', '— выберите тип —');
 
   return (
     <div>
