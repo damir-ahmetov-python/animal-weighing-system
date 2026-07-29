@@ -70,12 +70,12 @@ class Animal(Base):
     gender: Mapped[str] = mapped_column(
         Enum('male', 'female', name='gender_enum'), nullable=False
     )
-    name: Mapped[str] = mapped_column(String(100), nullable=True)  # кличка может отсутствовать
+    name: Mapped[str | None] = mapped_column(String(100), nullable=True)  # кличка может отсутствовать
     arrival_date: Mapped[datetime.date] = mapped_column(Date, nullable=False)
-    arrival_age_months: Mapped[int] = mapped_column(Integer, nullable=True)
+    arrival_age_months: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    breed_id: Mapped[int] = mapped_column(ForeignKey('breed.breed_id'), nullable=True)
-    parent_id: Mapped[int] = mapped_column(
+    breed_id: Mapped[int | None] = mapped_column(ForeignKey('breed.breed_id'), nullable=True)
+    parent_id: Mapped[int | None] = mapped_column(
         ForeignKey('animal.animal_id', ondelete='SET NULL'), nullable=True
     )  # ссылка на самого себя (родитель)
 
