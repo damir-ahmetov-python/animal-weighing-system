@@ -11,23 +11,34 @@
 
 ## Быстрый запуск (backend + БД через Docker)
 
-1. Скопировать пример переменных окружения и заполнить своими значениями:
+1. Склонировать репозиторий и перейти в его папку:
+
+   ```
+   git clone <URL репозитория>
+   cd animal-weighing-system
+   ```
+
+2. Скопировать пример переменных окружения и заполнить своими значениями:
 
    ```
    cp .env.example .env
    ```
 
-   В `.env` нужно указать `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` и `JWT_SECRET_KEY` (любая непустая строка для теста, для продакшена — случайный секрет).
-
-2. Поднять backend и Postgres:
+   В `.env` нужно указать `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`. `JWT_SECRET_KEY` можно оставить как в `.env.example` (`change_me`) для локального теста — приложению для работы достаточно любой непустой строки, она просто подписывает JWT-токены. Для продакшена значение должно быть секретным и непредсказуемым, сгенерировать такое можно так:
 
    ```
-   docker compose up --build
+   python -c "import secrets; print(secrets.token_urlsafe(32))"
    ```
 
-   Миграции Alembic применяются автоматически при старте контейнера (см. `backend/Dockerfile`) — руками их накатывать не нужно.
+3. Поднять backend и Postgres:
 
-3. Backend будет доступен на `http://localhost:8000`, автогенерируемая документация API — на `http://localhost:8000/docs`.
+   ```
+   docker compose up --build -d
+   ```
+
+   `-d` — поднять в фоне, чтобы терминал освободился для следующих команд. Логи в любой момент можно посмотреть через `docker compose logs -f backend`. Миграции Alembic применяются автоматически при старте контейнера (см. `backend/Dockerfile`) — руками их накатывать не нужно.
+
+4. Backend будет доступен на `http://localhost:8000`, автогенерируемая документация API — на `http://localhost:8000/docs`.
 
 ## Запуск frontend
 
@@ -52,46 +63,52 @@ Frontend будет на `http://localhost:5173`. Backend должен быть 
 
 ## Регистрация и активация
 
-Активации по email нет — ссылка активации выводится в лог backend-контейнера:
+Активации по email нет — ссылка активации выводится в лог backend-контейнера. Команды ниже выводят не всю строку лога, а сразу чистый токен — если скопировать вместо этого всю строку целиком (с "Activation link for ...:" впереди), `/auth/activate/{token}` ожидаемо ответит "невалидный токен".
 
 Linux/macOS:
 ```
-docker compose logs backend | grep "Activation link"
+docker compose logs backend | grep "Activation link" | sed -E 's#.*/auth/activate/([^[:space:]]+).*#\1#'
 ```
 
 Windows (PowerShell):
 ```
-docker compose logs backend | Select-String "Activation link"
+(docker compose logs backend | Select-String "Activation link").Line -replace '.*/auth/activate/(\S+).*','$1'
 ```
 
-Скопируйте ссылку (или просто токен из неё) и откройте `http://localhost:8000/auth/activate/{token}` в браузере — либо через `/docs` (Swagger, `GET /auth/activate/{token}`, "Try it out").
+Вставьте полученный токен в поле `token` в Swagger (`/docs` → `GET /auth/activate/{token}` → "Try it out"), либо откройте `http://localhost:8000/auth/activate/<токен>` прямо в браузере.
 
 ## Тестовые учётки / доступ администратора
 
 Эндпоинта для создания администратора нет — искусственно вводить "секретный" способ регистрации первого admin в реальной системе небезопасно. Первый администратор назначается напрямую в БД:
 
 ```
-docker exec -it animal_weighing_system_db psql -U <POSTGRES_USER> -d <POSTGRES_DB> \
-  -c "UPDATE users SET role='admin' WHERE login='ваш_логин';"
+docker exec -it animal_weighing_system_db psql -U <POSTGRES_USER> -d <POSTGRES_DB> -c "UPDATE users SET role='admin' WHERE login='ваш_логин';"
 ```
 
 Пользователь должен быть уже зарегистрирован и активирован обычным способом. После смены роли нужно перелогиниться (роль читается из БД при каждом запросе, но токен лучше перевыпустить для чистоты).
 
 ## Тесты
 
+Тесты запускаются локально, а не в Docker-контейнере — они поднимают свой отдельный временный Postgres через `pgserver` вместо БД из `docker compose`, поэтому зависимости нужно ставить в свой Python. Рекомендуется venv, чтобы не пересекаться с другими пакетами, уже стоящими в системном Python:
+
 ```
 cd backend
+python -m venv venv
+venv\Scripts\activate       # Windows
+source venv/bin/activate    # Linux/macOS
 pip install -r requirements.txt
 pytest tests/ -v
 ```
 
-Тесты поднимают отдельный временный Postgres (пакет `pgserver`, embedded-бинарник, не требует прав root и не трогает БД из `docker compose`) и прогоняются на реальных constraints БД, а не на моках — покрыты самые важные с точки зрения бизнес-логики сценарии:
+Тесты прогоняются на реальных constraints БД (пакет `pgserver`, embedded-бинарник, не требует прав root), а не на моках — покрыты самые важные с точки зрения бизнес-логики сценарии:
 
 - полный флоу регистрации (неактивен → логин отклонён → активация → логин проходит);
 - защита от каскадного удаления `breed`/`animaltype`, на которые ссылаются существующие записи (409, а не тихая порча данных);
 - уникальность породы в рамках типа животного;
 - уникальность взвешивания животного в рамках одной даты;
 - доступ к чужой записи взвешивания — 404 для обычного пользователя, полный доступ для admin.
+
+Предупреждение `StarletteDeprecationWarning` (про httpx/httpx2) и сообщение `--- Logging error ---` от `pgserver` после завершения тестов — безопасны, это шум от версий зависимостей и от закрытия временной БД, а не ошибка теста. Итог смотрите по строке `passed`/`failed`.
 
 ## Структура проекта
 
