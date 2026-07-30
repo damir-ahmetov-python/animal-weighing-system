@@ -41,12 +41,12 @@ def create_weighting_endpoint(
         return weighting
     except IntegrityError:
         session.rollback()
-        raise HTTPException(status_code=409, detail="Weighting already exist")
+        raise HTTPException(status_code=409, detail='Weighting for this animal on this date already exists')
 
 @router.get("", response_model=List[WeightingResponse])
 def get_weightings(session: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """admin видит все записи, обычный пользователь - только свои."""
-    if current_user.role == "admin":
+    if current_user.role == 'admin':
         return get_all_weightings(session=session)
     else:
         return get_weighting_by_user(session=session, user_id=current_user.id)
